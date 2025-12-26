@@ -2,6 +2,7 @@ import express from 'express'
 import 'dotenv/config'
 import cors from 'cors'
 import connectDB from './configs/db.js'
+
 import userRouter from './routes/userRoutes.js'
 import reportsRouter from './routes/reportsRouter.js'
 import needsRouter from './routes/needsRouter.js'
@@ -10,13 +11,32 @@ import categoryRouter from './routes/categoryRouter.js'
 
 const app = express()
 
-await connectDB()
+const allowedOrigins = [
+  'https://162ombr.vercel.app',
+  'https://162ombr.com.ua',
+  'https://www.162ombr.com.ua'
+]
 
-app.use(cors())
+app.use(cors({
+  origin: function (origin, callback) {
+    // дозволяємо запити без origin (Postman, SSR)
+    if (!origin) return callback(null, true)
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}))
+
 app.use(express.json())
 
 app.get('/', (req, res) => {
-    res.send('Server is running')
+  res.send('Server is running')
 })
 
 app.use('/api/user', userRouter)
@@ -27,6 +47,16 @@ app.use('/api/category', categoryRouter)
 
 const PORT = process.env.PORT || 3000
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`)
-})
+// ⬇️ ВАЖЛИВО: старт через async-функцію
+const startServer = async () => {
+  try {
+    await connectDB()
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT}`)
+    })
+  } catch (error) {
+    console.error('Server failed to start:', error)
+  }
+}
+
+startServer()
